@@ -1,0 +1,11 @@
+Testhisafer : jupyter notebook pour explorer le package R de HiSAFE. 
+Commentaires : 
++ modèle agroferstier implémenté
++ Dupraz participe
+- beaucoup de paramètres (~750)
+
+Testpyaez : jupyter notebook pour explorer le module python PyAEZ.
+Commentaires :
++ open source
++ modèle 'simple' (contraintes ajoutées une par une sur la parcelle)
+- pas de modèle agroforestier (pas d'arbres)
