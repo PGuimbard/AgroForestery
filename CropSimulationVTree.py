@@ -9,6 +9,10 @@ the best crop cycle that produces maximum yield for a particular grid
 Modifications
 1.  Minimum cycle length checking logic added to crop simulation.
 2.  New crop parameters: minimum cycle length, maximum cycle length, plant height is added logic added.
+
+Modifications (paul)
+- l.942 : ajouter arbres dans CropSimulation + nouvelle initialisation avec les rangées et paramètres des arbres setTrees
+- tentatives entre """...""" d'ajouter les arbres
 """
 
 import numpy as np
@@ -33,6 +37,99 @@ class CropSimulation(object):
         self.set_adjustment = False 
         self.setTypeBConstraint = False
         self.set_monthly = False
+        self.set_trees = False #à mettre sur True pour simulations agroforestières
+
+    def setTrees(self, rows, start_cols, end_cols, temp_reduction, radiation_reduction, wind_reduction, precipitation_increase, humidity_increase):
+    """Ajoute des rangées d'arbres au modèle, en spécifiant les effets géo-climatiques. A runner si on met self.set_trees=True, avant de farie CropSimulation,pour spécifier les paramètres des arbres
+
+    Args:
+        rows (np.array(dim=1, dtype=int)): Liste des lignes où les arbres sont situés dans la grille de simulation.
+        start_cols (np.array(dim=1, dtype=int)): Liste des colonnes de début où les arbres commencent dans la grille de simulation.
+        end_cols (np.array(dim=1, dtype=int)): Liste des colonnes de fin où les arbres se terminent dans la grille de simulation.
+        temp_reduction (float): Réduction de la température (en degrés Celsius) due à la présence des arbres.
+        radiation_reduction (float): Réduction de la radiation solaire (en pourcentage) due à l'ombre des arbres.
+        wind_reduction (float): Réduction de la vitesse du vent (en pourcentage) due à la présence des arbres.
+        precipitation_increase (float): Augmentation des précipitations (en pourcentage) due aux racines des arbres.
+        humidity_increase (float): Augmentation de l'humidité relative (en pourcentage) due à la condensation des arbres.
+
+    Returns:
+        None
+    """
+        # Verification que les tableaux rows, start_cols et end_cols ont la même longueur
+        if not (len(rows) == len(start_cols) == len(end_cols)):
+            raise ValueError("Les tableaux rows, start_cols et end_cols doivent avoir la même longueur.")
+        self.tree_params = []
+        for i in range(len(rows)):
+            tree_params = {
+                'row': rows[i],
+                'start_col': start_cols[i],
+                'end_col': end_cols[i],
+                'temp_reduction': temp_reduction,
+                'radiation_reduction': radiation_reduction,
+                'wind_reduction': wind_reduction,
+                'precipitation_increase': precipitation_increase,
+                'humidity_increase': humidity_increase
+            }
+            self.tree_params.append(tree_params)
+
+
+    def modulate_tree_effects(minT, maxT, shortRad, wind2m, totalPrec, rel_humidity, i_row, i_col, tree_params):
+        """
+        Module les effets des arbres en fonction de la distance du pixel aux arbres les plus proches.
+    
+        Args:
+            minT (float): Température minimale quotidienne [Celsius].
+            maxT (float): Température maximale quotidienne [Celsius].
+            shortRad (float): Radiation solaire quotidienne [W/m²].
+            wind2m (float): Vitesse du vent à 2 mètres [m/s].
+            totalPrec (float): Précipitations totales quotidiennes [mm].
+            rel_humidity (float): Humidité relative quotidienne [%].
+            i_row (int): Index de la ligne du pixel.
+            i_col (int): Index de la colonne du pixel.
+            tree_params (list): Liste des rangées d'arbres avec leurs effets climatiques.
+    
+        Returns:
+            tuple: Température minimale, température maximale, radiation solaire, vitesse du vent, précipitations totales, et humidité relative ajustées.
+        """
+        # Initialiser les ajustements à zéro
+        temp_reduction = 0
+        radiation_reduction = 0
+        wind_reduction = 0
+        precipitation_increase = 0
+        humidity_increase = 0
+    
+        # Parcourir chaque rangée d'arbres
+        for tree_row in tree_params:
+            # Calculer la distance entre le pixel et la rangée d'arbres
+            if i_row == tree_row['row'] and tree_row['start_col'] <= i_col <= tree_row['end_col']:
+                distance = 0  # Le pixel est directement sous les arbres, faudrait que ça n'arrive pas (mettre un mask ?)
+            else:
+                # Calculer la distance euclidienne
+                distance = min(abs(i_row - tree_row['row']), abs(i_col - tree_row['start_col']), abs(i_col - tree_row['end_col']))
+    
+            # Moduler les effets en fonction de la distance
+            if distance <= 5:  # Exemple : effet maximal à moins de 5 pixels
+                temp_reduction += tree_row['temp_reduction']
+                radiation_reduction += tree_row['radiation_reduction']
+                wind_reduction += tree_row['wind_reduction']
+                precipitation_increase += tree_row['precipitation_increase']
+                humidity_increase += tree_row['humidity_increase']
+            elif distance <= 10:  # Exemple : effet réduit entre 5 et 10 pixels
+                temp_reduction += tree_row['temp_reduction'] * 0.5
+                radiation_reduction += tree_row['radiation_reduction'] * 0.5
+                wind_reduction += tree_row['wind_reduction'] * 0.5
+                precipitation_increase += tree_row['precipitation_increase'] * 0.5
+                humidity_increase += tree_row['humidity_increase'] * 0.5
+    
+        # Appliquer les ajustements aux conditions climatiques
+        minT -= temp_reduction
+        maxT -= temp_reduction
+        shortRad *= (1 - radiation_reduction)
+        wind2m *= (1 - wind_reduction)
+        totalPrec *= (1 + precipitation_increase)
+        rel_humidity *= (1 + humidity_increase)
+    
+        return minT, maxT, shortRad, wind2m, totalPrec, rel_humidity
 
     def setMonthlyClimateData(self, min_temp, max_temp, precipitation, short_rad, wind_speed, rel_humidity):
         """Load MONTHLY climate data into the Class and calculate the Reference Evapotranspiration (ETo)
@@ -840,8 +937,11 @@ class CropSimulation(object):
                     wind2m_daily_point = self.wind2m_daily[i_row, i_col, :]
                     totalPrec_daily_point = self.totalPrec_daily[i_row, i_col, :]
                     rel_humidity_daily_point = self.rel_humidity_daily[i_row, i_col, :]
-                    
 
+                # Ajuster les conditions climatiques locales en fonction des rangées d'arbres
+                # Prise en compte des arbres (il faut avoir run self.setTrees
+                if self.set_trees:
+                    minT_daily_point, maxT_daily_point, shortRad_daily_point, wind2m_daily_point, totalPrec_daily_point, rel_humidity_daily_point = self.modulate_tree_effects(minT_daily_point, maxT_daily_point, shortRad_daily_point, wind2m_daily_point, totalPrec_daily_point, rel_humidity_daily_point, i_row, i_col,self.tree_params)
                 # calculate ETO for full year for particular location (pixel) 7#
                 obj_eto = ETOCalc.ETOCalc(
                     1, minT_daily_point.shape[0], self.latitude[i_row, i_col], self.elevation[i_row, i_col])

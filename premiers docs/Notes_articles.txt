@@ -1,0 +1,32 @@
+########## I. Description Modèles existants
+AF : 
+Avantages : productivité, durabilité, puits Co2, matériaux construction, symbioses, protection (- intrants),
+lutter contre l'érosion, plus de biomasse, N, P, K, Mg, Ca, 
+Inconvénients : ombre, compétition nutritionelle, échelle de temps longue, compétition eau de surface,
+
+Objectif d'un modèle : 'stratifications horizontale et verticale suffisantes pour prédire les consommations 
+de ressources des différents composants dans un cadre d'interaction et de compétition, le tout dans un cadre
+économique contraint' 
+
+Architercure d'un modèle :
+modèle 'core' -> Pousse des plantes (selon sol, ...) 
+e.g. WOFOST , DSSAT , APSIM , ‘Wageningen crop models’,
+Hybrid-Maize (for maize only), STICS and AquaCro. /!\ marchent surtout en monoculture
+Modèles 'core' plus diversifiés : HyPAR, WaNuLCAS and the SAFE family (Hi-SAFE and Yield-SAFE)
+
+Avoir un modèle dont les briques sont changeables chacunes + compatibles avec données disponibles aux 
+agriculteurs (sinon génération par modèle ou accès via bdd externes)
+
+########## II. Comparaison Modèles existants
+a) simplified models with limited data requirements for agricultural extension and modelling landscape-scale 
+effects (SAFE)
+b) process-based research tools on the plot-to-field scale (WaNuLCAS)
+
+Modèles pas mauvais, à utiliser pour un méta-modèle : APSIM, SAFE
+
+à lire (APSIM version AF) Smethurst, P.J.; Huth, N.I.; Masikati, P.; Sileshi, G.W.; Akinnifesi, F.K.; Wilson, J.; Sinclair, F. Accurate Crop Yield Predictions from
+Modelling Tree-Crop Interactions in Gliricidia-Maize Agroforestry. Agric. Syst. 2017, 155, 70–77
+
+######### Idées et questions
+
+- Mix entre modèle de processus et fit de données expérimentales / simulées
